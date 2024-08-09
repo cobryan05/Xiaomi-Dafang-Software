@@ -1505,10 +1505,9 @@ static void *IMP_Audio_Play_ALGO_AO_Thread(void *argv)
 		return NULL;
 	}
 
-	int i = 0;
 	while(1) {
 		size = fread(buf, 1, IMP_AUDIO_BUF_SIZE, play_file);
-		if(size < IMP_AUDIO_BUF_SIZE)
+		if(size == 0)
 			break;
 
 		/* Step 5: send frame data. */
@@ -1531,6 +1530,12 @@ static void *IMP_Audio_Play_ALGO_AO_Thread(void *argv)
 /*		IMP_LOG_INFO(TAG, "Play: TotalNum %d, FreeNum %d, BusyNum %d\n",
 				play_status.chnTotalNum, play_status.chnFreeNum, play_status.chnBusyNum);
 */
+	}
+
+	ret = IMP_AO_FlushChnBuf(devID, chnID);
+	if(ret != 0) {
+		IMP_LOG_ERR(TAG, "IMP_AO_FlushChnBuf error\n");
+		return NULL;
 	}
 
 
