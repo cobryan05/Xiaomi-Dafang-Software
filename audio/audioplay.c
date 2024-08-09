@@ -16,11 +16,15 @@
 
 #define TAG "Sample-Audio"
 
+
 #define AEC_SAMPLE_RATE 8000
 #define AEC_SAMPLE_TIME 10
 
 #define IMP_AUDIO_BUF_SIZE (5 * (AEC_SAMPLE_RATE * sizeof(short) * AEC_SAMPLE_TIME / 1000))
 #define IMP_AUDIO_RECORD_NUM 200
+
+#define FADE_IN_BUF_CNT 1
+#define MIN_FADE_FACTOR 0.01
 
 #define IMP_AUDIO_RECORD_ALGO_AI_FILE "/tmp/record_algo_ai_file.pcm"
 #define IMP_AUDIO_RECORD_VOLTEST_FILE "/tmp/record_voltest_file.pcm"
@@ -1505,10 +1509,25 @@ static void *IMP_Audio_Play_ALGO_AO_Thread(void *argv)
 		return NULL;
 	}
 
+	uint32_t fades_left = FADE_IN_BUF_CNT;
 	while(1) {
 		size = fread(buf, 1, IMP_AUDIO_BUF_SIZE, play_file);
 		if(size == 0)
 			break;
+
+		/* Quick hack to suppress the speaker pop */
+		if( fades_left > 0 ) {
+			int16_t* samples = (int16_t*)buf;
+			uint32_t i = 0;
+			for( i = 0; i < size/2; ++i ) {
+				float fade_factor = 1 - ((float)fades_left / FADE_IN_BUF_CNT);
+				if( fade_factor < MIN_FADE_FACTOR ) {
+					fade_factor = MIN_FADE_FACTOR;
+				}
+				samples[i] *= fade_factor;
+			}
+			fades_left--;
+		}
 
 		/* Step 5: send frame data. */
 		IMPAudioFrame frm;
